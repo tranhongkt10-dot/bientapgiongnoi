@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { apiUrl } from '../utils/api';
 import { DialogueLine } from '../types';
 import { AVAILABLE_VOICES, VOCAL_TAGS } from '../data/voices';
 import {
@@ -134,7 +135,7 @@ export const DialogueStudio: React.FC<DialogueStudioProps> = ({
     setIsLoadingPreview(true);
 
     try {
-      const res = await fetch('/api/voice-preview', {
+      const res = await fetch(apiUrl('/api/voice-preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
