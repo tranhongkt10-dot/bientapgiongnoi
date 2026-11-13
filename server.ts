@@ -12,7 +12,23 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = 3000;
+const port = Number(process.env.PORT || 3000);
+const frontendOrigin = process.env.FRONTEND_ORIGIN || 'https://tranhongkt10-dot.github.io';
+
+// Allow the GitHub Pages frontend to call this separately hosted API.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && (frontendOrigin === '*' || origin === frontendOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
+app.get('/health', (_req, res) => res.json({ ok: true, service: 'voicebloom-api' }));
 
 app.use(express.json({ limit: '15mb' }));
 
