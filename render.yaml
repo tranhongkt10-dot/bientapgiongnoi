@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: voicebloom-api
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: FRONTEND_ORIGIN
+        value: https://tranhongkt10-dot.github.io
+      - key: GEMINI_API_KEY
+        sync: false
