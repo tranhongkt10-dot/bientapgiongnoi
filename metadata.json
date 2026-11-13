@@ -1,0 +1,8 @@
+{
+  "name": "TẠO ÂN THANH TỪ VĂN BẢN ( HỒNG)",
+  "description": "Transform heartfelt words into lifelike emotional speech using Gemini 3.8 Flash TTS with vocal bursts, custom styles, and multi-speaker dialogues.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
