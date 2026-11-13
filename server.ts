@@ -28,7 +28,35 @@ app.use((req, res, next) => {
   next();
 });
 
+
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'voicebloom-api' }));
+
+// Gemini returns raw 24 kHz PCM for TTS. Wrap it in a valid WAV container
+// so browsers can play and users can download the generated speech reliably.
+function normalizeGeminiAudio(base64Audio: string): string {
+  const pcm = Buffer.from(base64Audio, 'base64');
+  if (pcm.length >= 12 && pcm.toString('ascii', 0, 4) === 'RIFF') return base64Audio;
+  const sampleRate = 24000;
+  const channels = 1;
+  const bitsPerSample = 16;
+  const blockAlign = channels * bitsPerSample / 8;
+  const wav = Buffer.alloc(44 + pcm.length);
+  wav.write('RIFF', 0);
+  wav.writeUInt32LE(36 + pcm.length, 4);
+  wav.write('WAVE', 8);
+  wav.write('fmt ', 12);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(channels, 22);
+  wav.writeUInt32LE(sampleRate, 24);
+  wav.writeUInt32LE(sampleRate * blockAlign, 28);
+  wav.writeUInt16LE(blockAlign, 32);
+  wav.writeUInt16LE(bitsPerSample, 34);
+  wav.write('data', 36);
+  wav.writeUInt32LE(pcm.length, 40);
+  pcm.copy(wav, 44);
+  return wav.toString('base64');
+}
 
 app.use(express.json({ limit: '15mb' }));
 
@@ -192,7 +220,8 @@ app.post('/api/tts', async (req, res) => {
         throw err;
       }
 
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      const rawAudio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      const base64Audio = rawAudio ? normalizeGeminiAudio(rawAudio) : undefined;
       if (!base64Audio) {
         throw new Error('Không thể tạo âm thanh đối thoại từ Gemini.');
       }
@@ -312,23 +341,12 @@ app.post('/api/tts', async (req, res) => {
       error?.message?.includes('quota') ||
       error?.message?.includes('RESOURCE_EXHAUSTED');
 
-    // Resilient fallback: Return a valid fallback WAV so frontend never crashes
-    const approxDuration = mode === 'dialogue'
-      ? Math.max(4, Math.min(20, (dialogue?.length || 2) * 4))
-      : Math.max(3, Math.min(15, Math.ceil((text?.length || 50) / 16)));
-
-    const fallbackBuf = createFallbackWav(approxDuration);
-
-    return res.json({
-      audioData: fallbackBuf.toString('base64'),
-      mimeType: 'audio/wav',
-      model: 'web-speech-fallback',
+    return res.status(isQuota ? 429 : 503).json({
+      error: isQuota
+        ? 'Gemini TTS đã hết hạn mức hiện tại. Vui lòng thử lại sau hoặc kiểm tra hạn mức API.'
+        : 'Không thể tạo giọng nói từ Gemini. Vui lòng kiểm tra API key, model và kết nối máy chủ.',
       quotaExceeded: isQuota,
       isFallback: true,
-      cached: false,
-      notice: isQuota
-        ? 'Tài khoản đã đạt hạn mức 10 yêu cầu/ngày của Gemini TTS miễn phí. Ứng dụng đã tự động kích hoạt Giọng Đọc Dự Phòng (Web Speech Engine) để bạn tiếp tục nghe không giới hạn.'
-        : 'Đã chuyển sang giọng đọc dự phòng.',
     });
   }
 });
@@ -440,8 +458,9 @@ app.post('/api/voice-preview', async (req, res) => {
     }
 
     if (!base64Audio) {
-      return res.status(500).json({ error: 'No audio returned for preview' });
+      return res.status(502).json({ error: 'Gemini không trả về dữ liệu âm thanh.' });
     }
+    base64Audio = normalizeGeminiAudio(base64Audio);
 
     // Save to disk cache permanently
     try {
