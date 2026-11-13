@@ -66,15 +66,18 @@ if (!fs.existsSync(PREVIEW_CACHE_DIR)) {
   fs.mkdirSync(PREVIEW_CACHE_DIR, { recursive: true });
 }
 
-// Initialize Google GenAI client according to AI Studio guidelines
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
+// Create the Gemini client lazily so the health endpoint can start even
+// before the owner adds GEMINI_API_KEY in the Render dashboard.
+function getAI() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY chưa được cấu hình trên máy chủ.');
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: { 'User-Agent': 'voicebloom-api' },
     },
-  },
-});
+  });
+}
 
 // Helper to generate a clean, harmonic fallback WAV buffer (24kHz Mono 16-bit PCM)
 function createFallbackWav(durationSeconds = 4, sampleRate = 24000): Buffer {
@@ -203,7 +206,7 @@ app.post('/api/tts', async (req, res) => {
       let usedModel = 'gemini-3.8-flash-tts';
 
       try {
-        response = await ai.models.generateContent({
+        response = await getAI().models.generateContent({
           model: 'gemini-3.8-flash-tts',
           contents: [{ role: 'user', parts: parts }],
           config: {
@@ -254,7 +257,7 @@ app.post('/api/tts', async (req, res) => {
       let usedModel = 'gemini-3.8-flash-lite-tts';
 
       try {
-        response = await ai.models.generateContent({
+        response = await getAI().models.generateContent({
           model: 'gemini-3.8-flash-lite-tts',
           contents: [
             {
@@ -284,7 +287,7 @@ app.post('/api/tts', async (req, res) => {
         // If flash-lite fails, attempt with gemini-3.8-flash-tts
         if (!err?.message?.includes('429') && !err?.message?.includes('RESOURCE_EXHAUSTED')) {
           usedModel = 'gemini-3.8-flash-tts';
-          response = await ai.models.generateContent({
+          response = await getAI().models.generateContent({
             model: 'gemini-3.8-flash-tts',
             contents: [
               {
@@ -387,7 +390,7 @@ app.post('/api/voice-preview', async (req, res) => {
 
     // Use gemini-3.8-flash-lite-tts first for preview to conserve full-TTS quota
     try {
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: 'gemini-3.8-flash-lite-tts',
         contents: [
           {
@@ -417,7 +420,7 @@ app.post('/api/voice-preview', async (req, res) => {
     } catch (liteErr: any) {
       // If lite fails, attempt with gemini-3.8-flash-tts
       try {
-        const response = await ai.models.generateContent({
+        const response = await getAI().models.generateContent({
           model: 'gemini-3.8-flash-tts',
           contents: [
             {
@@ -510,7 +513,7 @@ Input text: "${text}"`;
       prompt = `Polish and improve this text for expressive Text-to-Speech narration with warm emotional delivery. Return ONLY the improved text:\n"${text}"`;
     }
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-3.8-flash',
       contents: prompt,
     });
