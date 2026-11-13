@@ -276,8 +276,18 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           Trình Phát Giọng Nói AI
         </h3>
         <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
-          Chọn phong cách và bấm <strong>"Chuyển Thành Giọng Nói"</strong> để lắng nghe câu nói chan chứa tình cảm được thể hiện chân thực với Gemini 3.8 Flash TTS.
+          {isFallback
+            ? 'Bản thu chưa được tạo thành tệp âm thanh. Bạn có thể nghe trực tiếp bằng giọng tiếng Việt có sẵn trên thiết bị.'
+            : 'Chọn phong cách và bấm "Chuyển Thành Giọng Nói" để tạo bản thu bằng Gemini TTS.'}
         </p>
+        {isFallback && onPlaySpeechFallback && textSnippet && (
+          <button
+            onClick={onPlaySpeechFallback}
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-rose-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-400"
+          >
+            <Play className="h-4 w-4" /> Nghe trực tiếp
+          </button>
+        )}
       </div>
     );
   }
