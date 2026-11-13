@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { apiUrl } from '../utils/api';
 import { AVAILABLE_VOICES, STYLE_PRESETS, VOCAL_TAGS } from '../data/voices';
 import { FilterRegion, FilterGender, FilterRole, VoiceOption } from '../types';
 import {
@@ -180,7 +181,7 @@ export const SingleSpeakerStudio: React.FC<SingleSpeakerStudioProps> = ({
     setIsUsingFallback(false);
 
     try {
-      const res = await fetch('/api/voice-preview', {
+      const res = await fetch(apiUrl('/api/voice-preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -254,7 +255,7 @@ export const SingleSpeakerStudio: React.FC<SingleSpeakerStudioProps> = ({
     setIsEnhancing(true);
     setEnhanceMessage(null);
     try {
-      const res = await fetch('/api/enhance-text', {
+      const res = await fetch(apiUrl('/api/enhance-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
