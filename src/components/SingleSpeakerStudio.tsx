@@ -181,7 +181,7 @@ export const SingleSpeakerStudio: React.FC<SingleSpeakerStudioProps> = ({
     setIsUsingFallback(false);
 
     try {
-      const res = await fetch(apiUrl('/api/voice-preview', {
+      const res = await fetch(apiUrl('/api/voice-preview'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -255,7 +255,7 @@ export const SingleSpeakerStudio: React.FC<SingleSpeakerStudioProps> = ({
     setIsEnhancing(true);
     setEnhanceMessage(null);
     try {
-      const res = await fetch(apiUrl('/api/enhance-text', {
+      const res = await fetch(apiUrl('/api/enhance-text'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
