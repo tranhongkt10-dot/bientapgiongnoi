@@ -10,7 +10,6 @@ import {
   speakSingleText,
   speakDialogueLines,
   stopAnyActiveSpeech,
-  generateClientFallbackWav,
 } from './utils/speechFallback';
 import {
   Sparkles,
@@ -119,38 +118,16 @@ export default function App() {
       AVAILABLE_VOICES.find((v) => v.id === selectedVoice) || AVAILABLE_VOICES[0];
     const displayName = `${voiceObj.name} - ${voiceObj.regionName}`;
 
-    // 1. Direct Web Speech mode (0 API calls, unlimited)
+    // Browser speech is for immediate listening only; it is not a downloadable audio file.
     if (ttsEngine === 'browser') {
-      try {
-        const estDuration = Math.max(3, Math.min(18, Math.ceil(singleText.length / 15)));
-        const blob = generateClientFallbackWav(estDuration);
-        const audioUrl = URL.createObjectURL(blob);
-
-        setCurrentAudioUrl(audioUrl);
-        setCurrentSnippet(singleText.trim());
-        setCurrentVoiceName(displayName);
-        setCurrentStyle(`${voiceObj.regionName} &bull; Web Speech Engine`);
-        setIsFallbackActive(true);
-
-        const newEntry: GeneratedAudio = {
-          id: `tts-${Date.now()}`,
-          timestamp: Date.now(),
-          text: singleText.trim(),
-          audioUrl: audioUrl,
-          voiceName: displayName,
-          style: `${voiceObj.regionName} (Giọng Dự Phòng)`,
-          mode: 'single',
-          regionName: voiceObj.regionName,
-        };
-        setHistory((prev) => [newEntry, ...prev.slice(0, 14)]);
-
-        // Voice the text aloud immediately
-        speakSingleText(singleText.trim(), voiceObj);
-      } catch (err: any) {
-        console.error('Client speech generation error:', err);
-      } finally {
-        setIsGenerating(false);
-      }
+      setCurrentAudioUrl(null);
+      setCurrentSnippet(singleText.trim());
+      setCurrentVoiceName(displayName);
+      setCurrentStyle(`${voiceObj.regionName} • Giọng đọc trực tiếp trên trình duyệt`);
+      setIsFallbackActive(true);
+      setQuotaNotice('Chế độ miễn phí của trình duyệt chỉ phát giọng trực tiếp; muốn tải file WAV/MP3, hãy dùng Gemini TTS khi máy chủ đã kết nối.');
+      speakSingleText(singleText.trim(), voiceObj);
+      setIsGenerating(false);
       return;
     }
 
@@ -215,34 +192,14 @@ export default function App() {
         throw new Error(data.error || 'Không nhận được dữ liệu âm thanh');
       }
     } catch (err: any) {
-      console.warn('API error, smoothly activating client speech fallback:', err);
-      // Graceful client fallback: generate audio and voice out
-      const estDuration = Math.max(3, Math.min(18, Math.ceil(singleText.length / 15)));
-      const blob = generateClientFallbackWav(estDuration);
-      const audioUrl = URL.createObjectURL(blob);
-
-      setCurrentAudioUrl(audioUrl);
-      setCurrentSnippet(singleText.trim());
-      setCurrentVoiceName(displayName);
-      setCurrentStyle(`${voiceObj.regionName} &bull; Giọng Đọc Dự Phòng`);
+      setError(err?.message || 'Không kết nối được máy chủ tạo giọng. Hãy kiểm tra địa chỉ API và API key.');
+      setCurrentAudioUrl(null);
+      setCurrentSnippet(preview);
+      setCurrentVoiceName(compositeName);
+      setCurrentStyle('Đối thoại phát trực tiếp bằng giọng hệ thống');
       setIsFallbackActive(true);
-      setQuotaNotice(
-        'Tài khoản đã đạt hạn mức Gemini TTS trong ngày. Ứng dụng đã chuyển sang Giọng Đọc Dự Phòng (Web Speech) để bạn tiếp tục sử dụng không giới hạn.'
-      );
-
-      speakSingleText(singleText.trim(), voiceObj);
-
-      const newEntry: GeneratedAudio = {
-        id: `tts-${Date.now()}`,
-        timestamp: Date.now(),
-        text: singleText.trim(),
-        audioUrl: audioUrl,
-        voiceName: displayName,
-        style: `${voiceObj.regionName} (Giọng Dự Phòng)`,
-        mode: 'single',
-        regionName: voiceObj.regionName,
-      };
-      setHistory((prev) => [newEntry, ...prev.slice(0, 14)]);
+      setQuotaNotice('Gemini TTS chưa khả dụng. Bạn có thể nghe trực tiếp bằng giọng tiếng Việt có sẵn trên thiết bị; chức năng tải file chỉ hoạt động khi API Gemini kết nối thành công.');
+      speakDialogueLines(dialogue);
     } finally {
       setIsGenerating(false);
     }
@@ -264,39 +221,16 @@ export default function App() {
     );
     const compositeName = `${speaker1Name} (${spk1Obj?.regionName || 'Bắc'}) & ${speaker2Name} (${spk2Obj?.regionName || 'Nam'})`;
 
-    // 1. Direct Web Speech mode
+    // Browser speech is for immediate listening only; it is not a downloadable audio file.
     if (ttsEngine === 'browser') {
-      try {
-        const estDuration = Math.max(4, Math.min(25, dialogue.length * 4));
-        const blob = generateClientFallbackWav(estDuration);
-        const audioUrl = URL.createObjectURL(blob);
-
-        setCurrentAudioUrl(audioUrl);
-        setCurrentSnippet(preview);
-        setCurrentVoiceName(compositeName);
-        setCurrentStyle('Kịch bản đối thoại vùng miền (Web Speech)');
-        setIsFallbackActive(true);
-
-        const newEntry: GeneratedAudio = {
-          id: `tts-${Date.now()}`,
-          timestamp: Date.now(),
-          text: preview,
-          dialoguePreview: preview,
-          audioUrl: audioUrl,
-          voiceName: compositeName,
-          style: 'Đối thoại 2 người (Giọng Dự Phòng)',
-          mode: 'dialogue',
-          regionName: 'Đa vùng miền',
-        };
-        setHistory((prev) => [newEntry, ...prev.slice(0, 14)]);
-
-        // Speak lines sequentially
-        speakDialogueLines(dialogue);
-      } catch (err: any) {
-        console.error('Client dialogue error:', err);
-      } finally {
-        setIsGenerating(false);
-      }
+      setCurrentAudioUrl(null);
+      setCurrentSnippet(preview);
+      setCurrentVoiceName(compositeName);
+      setCurrentStyle('Đối thoại phát trực tiếp trên trình duyệt');
+      setIsFallbackActive(true);
+      setQuotaNotice('Chế độ miễn phí của trình duyệt chỉ phát giọng trực tiếp; muốn tải file WAV/MP3, hãy dùng Gemini TTS khi máy chủ đã kết nối.');
+      speakDialogueLines(dialogue);
+      setIsGenerating(false);
       return;
     }
 
