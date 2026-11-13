@@ -133,7 +133,7 @@ export default function App() {
 
     // 2. Gemini 3.8 Flash TTS mode with automatic server & client fallback
     try {
-      const res = await fetch(apiUrl('/api/tts', {
+      const res = await fetch(apiUrl('/api/tts'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -194,12 +194,12 @@ export default function App() {
     } catch (err: any) {
       setError(err?.message || 'Không kết nối được máy chủ tạo giọng. Hãy kiểm tra địa chỉ API và API key.');
       setCurrentAudioUrl(null);
-      setCurrentSnippet(preview);
-      setCurrentVoiceName(compositeName);
-      setCurrentStyle('Đối thoại phát trực tiếp bằng giọng hệ thống');
+      setCurrentSnippet(singleText.trim());
+      setCurrentVoiceName(displayName);
+      setCurrentStyle('Phát trực tiếp bằng giọng hệ thống của trình duyệt');
       setIsFallbackActive(true);
       setQuotaNotice('Gemini TTS chưa khả dụng. Bạn có thể nghe trực tiếp bằng giọng tiếng Việt có sẵn trên thiết bị; chức năng tải file chỉ hoạt động khi API Gemini kết nối thành công.');
-      speakDialogueLines(dialogue);
+      speakSingleText(singleText.trim(), voiceObj);
     } finally {
       setIsGenerating(false);
     }
@@ -236,7 +236,7 @@ export default function App() {
 
     // 2. Gemini 3.8 Flash TTS dialogue mode
     try {
-      const res = await fetch(apiUrl('/api/tts', {
+      const res = await fetch(apiUrl('/api/tts'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -302,34 +302,14 @@ export default function App() {
         throw new Error(data.error || 'Không thể tạo âm thanh đối thoại');
       }
     } catch (err: any) {
-      console.warn('Dialogue API error, activating client speech fallback:', err);
-      const estDuration = Math.max(4, Math.min(25, dialogue.length * 4));
-      const blob = generateClientFallbackWav(estDuration);
-      const audioUrl = URL.createObjectURL(blob);
-
-      setCurrentAudioUrl(audioUrl);
+      setError(err?.message || 'Không kết nối được máy chủ tạo giọng. Hãy kiểm tra địa chỉ API và API key.');
+      setCurrentAudioUrl(null);
       setCurrentSnippet(preview);
       setCurrentVoiceName(compositeName);
-      setCurrentStyle('Kịch bản đối thoại vùng miền (Giọng Dự Phòng)');
+      setCurrentStyle('Đối thoại phát trực tiếp bằng giọng hệ thống');
       setIsFallbackActive(true);
-      setQuotaNotice(
-        'Tài khoản đã đạt hạn mức Gemini TTS trong ngày. Đã kích hoạt Giọng Đọc Dự Phòng (Web Speech Engine) để bạn tiếp tục trải nghiệm không giới hạn.'
-      );
-
+      setQuotaNotice('Gemini TTS chưa khả dụng. Bạn có thể nghe trực tiếp bằng giọng tiếng Việt có sẵn trên thiết bị; chức năng tải file chỉ hoạt động khi API Gemini kết nối thành công.');
       speakDialogueLines(dialogue);
-
-      const newEntry: GeneratedAudio = {
-        id: `tts-${Date.now()}`,
-        timestamp: Date.now(),
-        text: preview,
-        dialoguePreview: preview,
-        audioUrl: audioUrl,
-        voiceName: compositeName,
-        style: 'Đối thoại 2 người (Giọng Dự Phòng)',
-        mode: 'dialogue',
-        regionName: 'Đa vùng miền',
-      };
-      setHistory((prev) => [newEntry, ...prev.slice(0, 14)]);
     } finally {
       setIsGenerating(false);
     }
