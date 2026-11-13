@@ -315,7 +315,8 @@ app.post('/api/tts', async (req, res) => {
         }
       }
 
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      const rawAudio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      const base64Audio = rawAudio ? normalizeGeminiAudio(rawAudio) : undefined;
       if (!base64Audio) {
         throw new Error('Không thể tạo giọng nói từ model.');
       }
@@ -480,14 +481,12 @@ app.post('/api/voice-preview', async (req, res) => {
       error?.message?.includes('quota') ||
       error?.message?.includes('RESOURCE_EXHAUSTED');
 
-    // Return fallback preview WAV so preview never throws 500/429
-    const fallbackBuf = createFallbackWav(3);
-    return res.json({
-      audioData: fallbackBuf.toString('base64'),
-      mimeType: 'audio/wav',
-      cached: false,
-      isFallback: true,
+    return res.status(isQuota ? 429 : 503).json({
+      error: isQuota
+        ? 'Gemini TTS đã hết hạn mức hiện tại. Vui lòng thử lại sau.'
+        : 'Không thể tạo bản nghe thử. Vui lòng kiểm tra API key và máy chủ.',
       quotaExceeded: isQuota,
+      isFallback: true,
     });
   }
 });
