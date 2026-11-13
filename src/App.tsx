@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { apiUrl } from './utils/api';
 import { SingleSpeakerStudio } from './components/SingleSpeakerStudio';
 import { DialogueStudio } from './components/DialogueStudio';
 import { AudioPlayer } from './components/AudioPlayer';
@@ -155,7 +156,7 @@ export default function App() {
 
     // 2. Gemini 3.8 Flash TTS mode with automatic server & client fallback
     try {
-      const res = await fetch('/api/tts', {
+      const res = await fetch(apiUrl('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -301,7 +302,7 @@ export default function App() {
 
     // 2. Gemini 3.8 Flash TTS dialogue mode
     try {
-      const res = await fetch('/api/tts', {
+      const res = await fetch(apiUrl('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
